@@ -37,13 +37,18 @@ const Sidebar = () => {
 
       {/* --- 1. الشعار --- */}
       <div className="mb-8 flex-shrink-0 w-full flex justify-center">
-        <img
-          src="/logo.svg"
-          alt="شعار وصال"
-          className="w-20 h-20 object-contain hover:scale-110 transition-transform duration-300 drop-shadow-xl"
-          onError={(e) => { e.target.src = 'https://via.placeholder.com/80?text=Admin'; }}
-        />
-      </div>
+  <img
+    // التعديل هنا: استخدام BASE_URL لضمان الوصول للمسار الصحيح على GitHub Pages
+    src={`${import.meta.env.BASE_URL}logo.svg`}
+    alt="شعار وصال"
+    className="w-20 h-20 object-contain hover:scale-110 transition-transform duration-300 drop-shadow-xl"
+    onError={(e) => { 
+      // التعديل هنا: منع الحلقة اللانهائية عن طريق مسح دالة الخطأ بعد أول فشل
+      e.target.onerror = null; 
+      e.target.src = 'https://via.placeholder.com/80?text=Admin'; 
+    }}
+  />
+</div>
 
       {/* --- 2. روابط التنقل --- */}
       <nav className="flex flex-col items-center gap-3 w-full px-2 flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden">

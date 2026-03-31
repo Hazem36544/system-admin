@@ -1,5 +1,6 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+// التعديل هنا بدقة: تم استبدال BrowserRouter بـ HashRouter
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -19,8 +20,6 @@ const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAuth();
   return isAuthenticated ? children : <Navigate to="/login" />;
 };
-
-// (تم حذف المكون المؤقت DashboardHome من هنا لنظافة الكود)
 
 // دالة المسارات 
 const AppRoutes = () => {
