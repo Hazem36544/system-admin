@@ -5,16 +5,17 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null); // إضافة حالة المستخدم لتسهيل الوصول لبياناته في النظام
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // فحص التوكن بمجرد تحميل التطبيق
-    const token = localStorage.getItem('wesal_token') || localStorage.getItem('wesal_parent_token');
+    // ✅ التعديل هنا: فحص التوكن الخاص بالأدمن فقط عند تحميل التطبيق
+    const token = localStorage.getItem('wesal_admin_token');
     
-    // التأكد من أن التوكن موجود وأنه ليس التوكن الوهمي القديم أو كائن مضروب
+    // التأكد من أن التوكن موجود وصحيح
     if (token && token !== 'demo_token_123' && token !== '[object Object]') {
       setIsAuthenticated(true);
-      const savedUser = localStorage.getItem('wesal_user_data');
+      // ✅ التعديل هنا: قراءة بيانات مستخدم الأدمن من المفتاح المخصص له
+      const savedUser = localStorage.getItem('wesal_admin_user_data');
       if (savedUser) {
         try {
           setUser(JSON.parse(savedUser));
@@ -29,18 +30,18 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(false);
   }, []);
 
-  // تم التعديل هنا: استقبال بيانات المستخدم والتوكن الحقيقي بشكل صحيح
+  // دالة تسجيل الدخول الخاصة بالأدمن
   const login = (userData, token) => {
-    // حفظ التوكن في المتصفح إذا تم تمريره
+    // ✅ التعديل هنا: حفظ التوكن في مفتاح فريد لنظام الإدارة
     if (token) {
-      localStorage.setItem('wesal_token', token);
+      localStorage.setItem('wesal_admin_token', token);
     }
     
-    // حفظ بيانات المستخدم وصلاحيته إذا تم تمريرها
+    // ✅ التعديل هنا: حفظ بيانات المستخدم وصلاحيته في مفاتيح فريدة للأدمن
     if (userData) {
-      localStorage.setItem('wesal_user_data', JSON.stringify(userData));
+      localStorage.setItem('wesal_admin_user_data', JSON.stringify(userData));
       if (userData.role) {
-        localStorage.setItem('wesal_user_role', userData.role);
+        localStorage.setItem('wesal_admin_user_role', userData.role);
       }
       setUser(userData);
     }
@@ -49,13 +50,12 @@ export const AuthProvider = ({ children }) => {
   };
   
   const logout = () => {
-    // تنظيف شامل لجميع المفاتيح عند تسجيل الخروج
-    localStorage.removeItem('wesal_token');
-    localStorage.removeItem('wesal_parent_token');
-    localStorage.removeItem('token');
-    localStorage.removeItem('wesal_user_role');
-    localStorage.removeItem('wesal_user_data');
+    // ✅ التعديل هنا: تنظيف شامل للمفاتيح الخاصة بنظام الإدارة فقط عند تسجيل الخروج
+    localStorage.removeItem('wesal_admin_token');
+    localStorage.removeItem('wesal_admin_user_role');
+    localStorage.removeItem('wesal_admin_user_data');
     localStorage.removeItem('force_change_password');
+    
     setIsAuthenticated(false);
     setUser(null);
   };

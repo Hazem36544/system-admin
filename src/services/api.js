@@ -19,10 +19,8 @@ const api = axios.create({
  */
 api.interceptors.request.use(
     (config) => {
-        // البحث عن التوكن بمسمياته المختلفة لتغطية جميع حسابات النظام
-        const token = localStorage.getItem('wesal_parent_token') || 
-                      localStorage.getItem('wesal_token') || 
-                      localStorage.getItem('token');
+        // ✅ التعديل هنا: سحب التوكن الخاص بنظام الإدارة فقط لمنع التداخل مع الأنظمة الأخرى
+        const token = localStorage.getItem('wesal_admin_token');
                       
         if (token) {
             config.headers.Authorization = `Bearer ${token}`; 
@@ -67,7 +65,8 @@ export const authAPI = {
     
     // دالة مساعدة للحصول على بيانات المستخدم المحلي
     getCurrentUser: () => {
-        const savedUser = localStorage.getItem('wesal_user_data');
+        // ✅ التعديل هنا: استخدام اسم مخصص لبيانات أدمن النظام
+        const savedUser = localStorage.getItem('wesal_admin_user_data');
         return Promise.resolve({ data: savedUser ? JSON.parse(savedUser) : {} });
     }
 };

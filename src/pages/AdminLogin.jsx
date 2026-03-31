@@ -5,16 +5,23 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { authAPI, userAPI } from '/src/services/api'; 
 
-// دالة فك تشفير التوكن لاستخراج بيانات الأدمن وحالة الباسورد المؤقت
+// دالة فك تشفير التوكن مع معالجة الـ Padding لتجنب خطأ atob
 const parseJwt = (token) => {
   try {
     const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    
+    // إضافة علامات التكملة لتجنب خطأ InvalidCharacterError
+    while (base64.length % 4 !== 0) {
+      base64 += '=';
+    }
+    
     const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
         return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
     }).join(''));
     return JSON.parse(jsonPayload);
   } catch (e) {
+    console.error("Token parsing error:", e);
     return null;
   }
 };
@@ -37,11 +44,16 @@ const AdminLogin = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // التقاط أمر التغيير الإجباري لو موجود من قبل
+  // ✅ التعديل هنا: تنظيف مخصص للإدارة فقط دون المساس بباقي الأنظمة
   useEffect(() => {
     if (localStorage.getItem('force_change_password') === 'true') {
       setStep('change_password');
       setError('يرجى تغيير كلمة المرور المؤقتة قبل الدخول للنظام');
+    } else {
+      // مسح مفاتيح الإدارة فقط، وترك مفاتيح الأنظمة الأخرى في حالها
+      localStorage.removeItem('wesal_admin_token');
+      localStorage.removeItem('wesal_admin_user_data');
+      localStorage.removeItem('wesal_admin_user_role');
     }
   }, []);
 
@@ -72,13 +84,10 @@ const AdminLogin = () => {
     setLoading(true);
     setError(null);
 
-    // ✅ مسح اللوكل ستوريدج من أي داتا قديمة تابعة لأي نظام قبل بدء عملية الدخول
-    localStorage.removeItem('wesal_token');
-    localStorage.removeItem('wesal_parent_token');
-    localStorage.removeItem('token');
-    localStorage.removeItem('wesal_user_data');
-    localStorage.removeItem('wesal_user_role');
-    localStorage.removeItem('force_change_password');
+    // تنظيف المفاتيح الخاصة بنظام الإدارة فقط لضمان جلسة نظيفة
+    localStorage.removeItem('wesal_admin_token');
+    localStorage.removeItem('wesal_admin_user_data');
+    localStorage.removeItem('wesal_admin_user_role');
     
     try {
       const response = await authAPI.loginSystemAdmin({ email, password });
@@ -94,7 +103,8 @@ const AdminLogin = () => {
         const isTemporary = decodedToken?.tmp_pwd === "True" || decodedToken?.tmp_pwd === true || decodedToken?.tmp_pwd === "true";
 
         if (isTemporary) {
-          localStorage.setItem('wesal_token', token); // حفظ التوكن المؤقت لعملية التغيير
+          // حفظ التوكن المؤقت في مفتاح الإدارة
+          localStorage.setItem('wesal_admin_token', token); 
           setTempToken(token);
           setPasswords({ ...passwords, currentPassword: password });
           setStep('change_password');
@@ -111,12 +121,12 @@ const AdminLogin = () => {
           role: 'admin'
         };
 
-        // حفظ البيانات النهائية والتوكن السليم
-        localStorage.setItem('wesal_token', token);
-        localStorage.setItem('wesal_user_data', JSON.stringify(userDataToSave));
-        localStorage.setItem('wesal_user_role', 'admin'); 
+        // حفظ البيانات النهائية والتوكن السليم بأسماء الإدارة المعزولة
+        localStorage.setItem('wesal_admin_token', token);
+        localStorage.setItem('wesal_admin_user_data', JSON.stringify(userDataToSave));
+        localStorage.setItem('wesal_admin_user_role', 'admin'); 
 
-        login(); 
+        login(userDataToSave, token); 
         toast.success("تم تسجيل الدخول بنجاح");
         navigate('/admin-dashboard/courts'); 
       } else {
@@ -125,7 +135,7 @@ const AdminLogin = () => {
 
     } catch (err) {
       console.error("Admin Login Error:", err);
-      localStorage.removeItem('wesal_token');
+      localStorage.removeItem('wesal_admin_token');
 
       if (err.response) {
         const errorMsg = err.response.data?.detail || err.response.data?.title || "";
@@ -172,7 +182,7 @@ const AdminLogin = () => {
       });
 
       // مسح الداتا المؤقتة
-      localStorage.removeItem('wesal_token');
+      localStorage.removeItem('wesal_admin_token');
       localStorage.removeItem('force_change_password');
 
       toast.success("تم تأمين الحساب بنجاح! جاري توجيهك للوحة التحكم...");
