@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Building2, Loader2, AlertCircle, Save, Scale } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Building2, Loader2, AlertCircle, Save, Scale, ChevronDown, Search } from 'lucide-react';
 import api from '../services/api'; 
 import CredentialsSuccessModal from '../components/CredentialsSuccessModal';
 import { toast } from 'react-hot-toast';
@@ -49,18 +49,110 @@ const FamilyCourtsPage = () => {
     contactInfo: ''
   });
 
+  // Dropdown States
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(''); 
+  const [highlightedIndex, setHighlightedIndex] = useState(-1); // ✅ تتبع العنصر المظلل بالكيبورد
+  
+  const dropdownRef = useRef(null);
+  const listRef = useRef(null); // ✅ ريفرنس للقائمة عشان نعمل سكرول أوتوماتيك
+
+  const filteredGovernorates = governoratesList.filter(gov => 
+    gov.ar.includes(searchTerm)
+  );
+
+  // إغلاق القائمة عند الضغط خارجها
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+        setHighlightedIndex(-1);
+        if (!formData.governorate) {
+          setSearchTerm('');
+        } else {
+          const selected = governoratesList.find(g => g.en === formData.governorate);
+          if (selected) setSearchTerm(selected.ar);
+        }
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [formData.governorate]);
+
+  // ✅ سكرول أوتوماتيك للعنصر المظلل بالكيبورد
+  useEffect(() => {
+    if (isDropdownOpen && highlightedIndex >= 0 && listRef.current) {
+      const highlightedElement = document.getElementById(`gov-item-${highlightedIndex}`);
+      if (highlightedElement) {
+        highlightedElement.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [highlightedIndex, isDropdownOpen]);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (error) setError(null);
   };
 
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setIsDropdownOpen(true);
+    setHighlightedIndex(-1); // تصفير التظليل لما يكتب حرف جديد
+    if (formData.governorate) {
+       setFormData({ ...formData, governorate: '' });
+    }
+    if (error) setError(null);
+  };
+
+  const handleSelectGovernorate = (gov) => {
+    setFormData({ ...formData, governorate: gov.en });
+    setSearchTerm(gov.ar); 
+    setIsDropdownOpen(false);
+    setHighlightedIndex(-1);
+    if (error) setError(null);
+  };
+
+  // ✅ معالجة ضغطات الكيبورد (الأسهم والإنتر)
+  const handleKeyDown = (e) => {
+    if (!isDropdownOpen) {
+      if (e.key === 'ArrowDown' || e.key === 'Enter') {
+        e.preventDefault();
+        setIsDropdownOpen(true);
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex(prev => 
+        prev < filteredGovernorates.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex(prev => (prev > 0 ? prev - 1 : prev));
+    } else if (e.key === 'Enter') {
+      e.preventDefault(); // منع الإرسال التلقائي للفورم
+      if (highlightedIndex >= 0 && highlightedIndex < filteredGovernorates.length) {
+        handleSelectGovernorate(filteredGovernorates[highlightedIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setIsDropdownOpen(false);
+      setHighlightedIndex(-1);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!formData.governorate) {
+        setError('يرجى اختيار المحافظة الصحيحة من القائمة');
+        return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      // إرسال البيانات للباك إند الحقيقي لإنشاء المحكمة (هيبعت المحافظة بالانجليزي)
       const response = await api.post('/api/users/family-courts', formData);
       
       const credentials = {
@@ -71,15 +163,14 @@ const FamilyCourtsPage = () => {
       setCreatedCredentials(credentials);
       setSuccessModalOpen(true);
       
-      // تفريغ الفورم بعد النجاح
       setFormData({
         name: '', governorate: '', address: '', email: '', contactInfo: ''
       });
+      setSearchTerm('');
       toast.success('تم إنشاء حساب المحكمة بنجاح!');
 
     } catch (err) {
       console.error("Create Court Error:", err);
-      // قراءة رسالة الخطأ من الـ ProblemDetails اللي بيرجعها الـ .NET
       const errorMsg = err.response?.data?.detail || err.response?.data?.title || 'حدث خطأ أثناء الإنشاء، يرجى التأكد من البيانات.';
       setError(errorMsg);
       toast.error('فشلت العملية');
@@ -118,9 +209,8 @@ const FamilyCourtsPage = () => {
 
         <form onSubmit={handleSubmit}>
           
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col space-y-8">
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col space-y-8 relative z-20">
             
-            {/* عنوان الفورم */}
             <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
               <div className="bg-blue-50 p-3 rounded-lg text-[#1e3a8a]">
                 <Building2 size={24} />
@@ -134,17 +224,59 @@ const FamilyCourtsPage = () => {
                 <input type="text" name="name" required value={formData.name} onChange={handleChange} className="w-full mt-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] outline-none transition-all" placeholder="مثال: محكمة أسرة المعادي" />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+                
+                {/* حقل المحافظة - Searchable Combobox with Keyboard Navigation */}
+                <div className="relative" ref={dropdownRef}>
                   <label className="text-sm font-semibold text-gray-700">المحافظة</label>
-                  <select name="governorate" required value={formData.governorate} onChange={handleChange} className="w-full mt-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] outline-none transition-all">
-                    <option value="" disabled>اختر المحافظة...</option>
-                    {/* ✅ التعديل هنا: القيمة بالانجليزي والعرض بالعربي */}
-                    {governoratesList.map(gov => (
-                      <option key={gov.en} value={gov.en}>{gov.ar}</option>
-                    ))}
-                  </select>
+                  
+                  <div className="relative w-full mt-2">
+                    <input 
+                      type="text"
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                      onKeyDown={handleKeyDown} // ✅ التقاط الكيبورد هنا
+                      onFocus={() => setIsDropdownOpen(true)}
+                      placeholder="ابحث أو اختر المحافظة..."
+                      className={`w-full px-4 py-3 pl-10 bg-gray-50 border rounded-xl outline-none transition-all
+                        ${isDropdownOpen ? 'border-[#1e3a8a] ring-2 ring-[#1e3a8a]/20' : 'border-gray-200 hover:border-gray-300'}
+                      `}
+                    />
+                    <ChevronDown 
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 cursor-pointer transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} 
+                    />
+                  </div>
+
+                  {isDropdownOpen && (
+                    <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                      <ul ref={listRef} className="max-h-60 overflow-y-auto custom-scrollbar py-2">
+                        {filteredGovernorates.length > 0 ? (
+                          filteredGovernorates.map((gov, index) => (
+                            <li 
+                              key={gov.en} 
+                              id={`gov-item-${index}`} // ✅ آي دي عشان السكرول
+                              onClick={() => handleSelectGovernorate(gov)}
+                              onMouseEnter={() => setHighlightedIndex(index)} // ✅ تظليل بالماوس كمان
+                              className={`px-4 py-3 text-sm cursor-pointer transition-colors flex justify-between items-center
+                                ${formData.governorate === gov.en ? 'bg-blue-50 text-[#1e3a8a] font-bold' : ''}
+                                ${highlightedIndex === index && formData.governorate !== gov.en ? 'bg-gray-100 text-[#1e3a8a]' : 'text-gray-700'}
+                              `}
+                            >
+                              {gov.ar}
+                            </li>
+                          ))
+                        ) : (
+                          <li className="px-4 py-4 text-sm text-gray-500 text-center flex flex-col items-center gap-2">
+                            <Search className="w-5 h-5 opacity-50" />
+                            لا توجد محافظة بهذا الاسم
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
                 </div>
+
                 <div>
                   <label className="text-sm font-semibold text-gray-700">رقم التواصل</label>
                   <input type="tel" name="contactInfo" required value={formData.contactInfo} onChange={handleChange} className="w-full mt-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] outline-none transition-all text-left" dir="ltr" placeholder="02-xxxxxxx" />
@@ -164,8 +296,7 @@ const FamilyCourtsPage = () => {
 
           </div>
 
-          {/* زر الإرسال */}
-          <div className="flex justify-center mt-10 mb-8">
+          <div className="flex justify-center mt-10 mb-8 relative z-10">
               <button 
                 type="submit" disabled={loading}
                 className="w-full md:w-[60%] lg:w-[50%] bg-[#1e3a8a] text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-900 transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed shadow-xl shadow-blue-900/20 text-lg border border-blue-800"
@@ -178,7 +309,6 @@ const FamilyCourtsPage = () => {
         </form>
       </div>
 
-       {/* Credentials Modal */}
       <CredentialsSuccessModal 
         isOpen={successModalOpen} 
         onClose={() => setSuccessModalOpen(false)}
