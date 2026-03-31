@@ -1,12 +1,37 @@
 import React, { useState } from 'react';
 import { Building2, Loader2, AlertCircle, Save, Scale } from 'lucide-react';
-import api from '../services/api'; // تأكد إن مسار ملف api.js صحيح حسب هيكل مشروعك
+import api from '../services/api'; 
 import CredentialsSuccessModal from '../components/CredentialsSuccessModal';
 import { toast } from 'react-hot-toast';
 
 const governoratesList = [
-  "القاهرة", "الجيزة", "الإسكندرية","سوهاج", "الدقهلية", "البحر الأحمر", 
-  "الشرقية", "الغربية", "المنوفية", "القليوبية", "البحيرة" 
+  { ar: "القاهرة", en: "Cairo" },
+  { ar: "الجيزة", en: "Giza" },
+  { ar: "الإسكندرية", en: "Alexandria" },
+  { ar: "القليوبية", en: "Qalyubia" },
+  { ar: "الدقهلية", en: "Dakahlia" },
+  { ar: "الشرقية", en: "Sharqia" },
+  { ar: "الغربية", en: "Gharbia" },
+  { ar: "المنوفية", en: "Monufia" },
+  { ar: "البحيرة", en: "Beheira" },
+  { ar: "كفر الشيخ", en: "Kafr El Sheikh" },
+  { ar: "دمياط", en: "Damietta" },
+  { ar: "بورسعيد", en: "Port Said" },
+  { ar: "الإسماعيلية", en: "Ismailia" },
+  { ar: "السويس", en: "Suez" },
+  { ar: "شمال سيناء", en: "North Sinai" },
+  { ar: "جنوب سيناء", en: "South Sinai" },
+  { ar: "البحر الأحمر", en: "Red Sea" },
+  { ar: "مطروح", en: "Matrouh" },
+  { ar: "الفيوم", en: "Fayoum" },
+  { ar: "بني سويف", en: "Beni Suef" },
+  { ar: "المنيا", en: "Minya" },
+  { ar: "أسيوط", en: "Assiut" },
+  { ar: "سوهاج", en: "Sohag" },
+  { ar: "قنا", en: "Qena" },
+  { ar: "الأقصر", en: "Luxor" },
+  { ar: "أسوان", en: "Aswan" },
+  { ar: "الوادي الجديد", en: "New Valley" }
 ];
 
 const FamilyCourtsPage = () => {
@@ -35,10 +60,9 @@ const FamilyCourtsPage = () => {
     setError(null);
 
     try {
-      // إرسال البيانات للباك إند الحقيقي لإنشاء المحكمة
+      // إرسال البيانات للباك إند الحقيقي لإنشاء المحكمة (هيبعت المحافظة بالانجليزي)
       const response = await api.post('/api/users/family-courts', formData);
       
-      // ✅ تم التعديل هنا: استخدام formData.email بدلاً من response.data.username
       const credentials = {
         username: formData.email, 
         temporaryPassword: response.data.temporaryPassword 
@@ -115,7 +139,10 @@ const FamilyCourtsPage = () => {
                   <label className="text-sm font-semibold text-gray-700">المحافظة</label>
                   <select name="governorate" required value={formData.governorate} onChange={handleChange} className="w-full mt-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] outline-none transition-all">
                     <option value="" disabled>اختر المحافظة...</option>
-                    {governoratesList.map(gov => <option key={gov} value={gov}>{gov}</option>)}
+                    {/* ✅ التعديل هنا: القيمة بالانجليزي والعرض بالعربي */}
+                    {governoratesList.map(gov => (
+                      <option key={gov.en} value={gov.en}>{gov.ar}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
