@@ -9,13 +9,13 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // ✅ التعديل هنا: فحص التوكن الخاص بالأدمن فقط عند تحميل التطبيق
-    const token = localStorage.getItem('wesal_admin_token');
+    const token = sessionStorage.getItem('wesal_admin_token');
     
     // التأكد من أن التوكن موجود وصحيح
     if (token && token !== 'demo_token_123' && token !== '[object Object]') {
       setIsAuthenticated(true);
       // ✅ التعديل هنا: قراءة بيانات مستخدم الأدمن من المفتاح المخصص له
-      const savedUser = localStorage.getItem('wesal_admin_user_data');
+      const savedUser = sessionStorage.getItem('wesal_admin_user_data');
       if (savedUser) {
         try {
           setUser(JSON.parse(savedUser));
@@ -34,14 +34,14 @@ export const AuthProvider = ({ children }) => {
   const login = (userData, token) => {
     // ✅ التعديل هنا: حفظ التوكن في مفتاح فريد لنظام الإدارة
     if (token) {
-      localStorage.setItem('wesal_admin_token', token);
+      sessionStorage.setItem('wesal_admin_token', token);
     }
     
     // ✅ التعديل هنا: حفظ بيانات المستخدم وصلاحيته في مفاتيح فريدة للأدمن
     if (userData) {
-      localStorage.setItem('wesal_admin_user_data', JSON.stringify(userData));
+      sessionStorage.setItem('wesal_admin_user_data', JSON.stringify(userData));
       if (userData.role) {
-        localStorage.setItem('wesal_admin_user_role', userData.role);
+        sessionStorage.setItem('wesal_admin_user_role', userData.role);
       }
       setUser(userData);
     }
@@ -51,10 +51,10 @@ export const AuthProvider = ({ children }) => {
   
   const logout = () => {
     // ✅ التعديل هنا: تنظيف شامل للمفاتيح الخاصة بنظام الإدارة فقط عند تسجيل الخروج
-    localStorage.removeItem('wesal_admin_token');
-    localStorage.removeItem('wesal_admin_user_role');
-    localStorage.removeItem('wesal_admin_user_data');
-    localStorage.removeItem('force_change_password');
+    sessionStorage.removeItem('wesal_admin_token');
+    sessionStorage.removeItem('wesal_admin_user_role');
+    sessionStorage.removeItem('wesal_admin_user_data');
+    sessionStorage.removeItem('force_change_password');
     
     setIsAuthenticated(false);
     setUser(null);

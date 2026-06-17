@@ -1,5 +1,6 @@
-console.log("Current API URL:", import.meta.env.VITE_API_URL);
 import axios from 'axios';
+
+console.log("Current API URL:", import.meta.env.VITE_API_URL);
 
 /**
  * 1. الإعدادات الأساسية
@@ -19,8 +20,8 @@ const api = axios.create({
  */
 api.interceptors.request.use(
     (config) => {
-        // ✅ التعديل هنا: سحب التوكن الخاص بنظام الإدارة فقط لمنع التداخل مع الأنظمة الأخرى
-        const token = localStorage.getItem('wesal_admin_token');
+        // ✅ سحب التوكن الخاص بنظام الإدارة فقط لمنع التداخل مع الأنظمة الأخرى
+        const token = sessionStorage.getItem('wesal_admin_token');
                       
         if (token) {
             config.headers.Authorization = `Bearer ${token}`; 
@@ -38,8 +39,6 @@ api.interceptors.response.use(
     (error) => {
         if (error.response && error.response.status === 401) {
             console.warn("Unauthorized access - redirecting to login...");
-            // يمكن تفعيل التوجيه التلقائي لاحقاً إذا لزم الأمر
-            // window.location.href = '/login'; 
         }
         
         const serverError = error.response?.data;
@@ -58,15 +57,14 @@ api.interceptors.response.use(
 export const authAPI = {
     loginVisitCenter: (creds) => api.post('/api/auth/visit-center-staff/sign-in', creds),
     loginCourtStaff: (creds) => api.post('/api/auth/court-staff/sign-in', creds),
-    loginFamilyCourt: (creds) => api.post('/api/auth/family-court/sign-in', creds),
+    loginFamilyCourt: (creds) => api.post('/api/auth/court/sign-in', creds), // ✅ محدث
     loginSchool: (creds) => api.post('/api/auth/school/sign-in', creds),
     loginSystemAdmin: (creds) => api.post('/api/auth/system-admin/sign-in', creds),
     loginParent: (creds) => api.post('/api/auth/parent/sign-in', creds),
     
     // دالة مساعدة للحصول على بيانات المستخدم المحلي
     getCurrentUser: () => {
-        // ✅ التعديل هنا: استخدام اسم مخصص لبيانات أدمن النظام
-        const savedUser = localStorage.getItem('wesal_admin_user_data');
+        const savedUser = sessionStorage.getItem('wesal_admin_user_data');
         return Promise.resolve({ data: savedUser ? JSON.parse(savedUser) : {} });
     }
 };
@@ -75,12 +73,11 @@ export const authAPI = {
  * --- [ NEW. خدمات المستخدمين - Users ] ---
  */
 export const userAPI = {
-    // ✅ تم التصحيح: استخدام PATCH وتوجيه الطلب للمسار الصحيح حسب السواجر
     changePassword: (data) => api.patch('/api/users/change-password', data),
     
     // مسارات إنشاء مستخدمي النظام من قبل الإدارة
     createCourtStaff: (data) => api.post('/api/users/court-staff', data),
-    createFamilyCourt: (data) => api.post('/api/users/family-courts', data),
+    createFamilyCourt: (data) => api.post('/api/users/courts', data), // ✅ محدث
     createSystemAdmin: (data) => api.post('/api/users/system-admin', data),
     createVisitCenterStaff: (data) => api.post('/api/users/visit-center-staff', data),
 };
@@ -93,7 +90,7 @@ export const courtAPI = {
     enrollFamily: (data) => api.post('/api/families', data),
     getFamily: (id) => api.get(`/api/families/${id}`),
     searchFamilies: (params) => api.get('/api/courts/me/families', { params }),
-    getMyFamilies: () => api.get('/api/families'), // ListFamiliesByParent
+    getMyFamilies: () => api.get('/api/families'), 
     
     // إدارة الأبناء داخل الأسرة
     addChild: (familyId, data) => api.post(`/api/families/${familyId}/children`, data),
@@ -108,10 +105,10 @@ export const courtAPI = {
     closeCase: (caseId, notes) => api.patch(`/api/court-cases/${caseId}/close`, { closureNotes: notes }),
 
     // 4. النفقة (Alimony)
-    createAlimony: (data) => api.post('/api/alimonies', data),
-    updateAlimony: (id, data) => api.put(`/api/alimonies/${id}`, data, { params: { alimoneyId: id } }),
-    deleteAlimony: (id) => api.delete(`/api/alimonies/${id}`, { params: { alimoneyId: id } }),
-    getAlimonyByCourtCase: (caseId) => api.get(`/api/court-cases/${caseId}/alimony`),
+    createAlimony: (data) => api.post('/api/alimony-schedules', data), // ✅ محدث
+    updateAlimony: (id, data) => api.put(`/api/alimony-schedules/${id}`, data), // ✅ محدث
+    deleteAlimony: (id) => api.delete(`/api/alimony-schedules/${id}`), // ✅ محدث
+    getAlimonyByCourtCase: (caseId) => api.get(`/api/court-cases/${caseId}/alimony-schedule`), // ✅ محدث
     
     // 5. الحضانة (Custody)
     createCustody: (data) => api.post('/api/custodies', data),
@@ -120,39 +117,39 @@ export const courtAPI = {
     getCustodyByCourtCase: (caseId) => api.get(`/api/court-cases/${caseId}/custodies`),
     
     // 6. جداول الزيارة (Schedules)
-    createSchedule: (data) => api.post('/api/visitation-schedules', data),
-    updateSchedule: (id, data) => api.put(`/api/visitation-schedules/${id}`, data),
-    deleteSchedule: (id) => api.delete(`/api/visitation-schedules/${id}`),
-    getVisitationScheduleByCourtCase: (caseId) => api.get(`/api/court-cases/${caseId}/visitation-schedules`),
+    createSchedule: (data) => api.post('/api/visit-schedules', data), // ✅ محدث
+    updateSchedule: (id, data) => api.put(`/api/visit-schedules/${id}`, data), // ✅ محدث
+    deleteSchedule: (id) => api.delete(`/api/visit-schedules/${id}`), // ✅ محدث
+    getVisitationScheduleByCourtCase: (caseId) => api.get(`/api/court-cases/${caseId}/visit-schedules`), // ✅ محدث
 
     // 7. المستحقات المالية (Payments Due)
-    listPaymentsDueByAlimony: (alimonyId, params) => api.get(`/api/alimonies/${alimonyId}/payments-due`, { params }),
-    listPaymentsHistory: (paymentDueId, params) => api.get(`/api/payments-due/${paymentDueId}/payments`, { params }),
-    withdrawPayment: (paymentDueId, data) => api.post(`/api/payments-due/${paymentDueId}/withdraw`, data),
-    initiateAlimonyPayment: (paymentDueId, data) => api.post(`/api/payments-due/${paymentDueId}/payments`, data),
+    listPaymentsDueByAlimony: (alimonyId, params) => api.get(`/api/alimony-schedules/${alimonyId}/alimony-dues`, { params }), // ✅ محدث
+    listPaymentsHistory: (paymentDueId, params) => api.get(`/api/alimony-schedules/${paymentDueId}/alimony-dues`, { params }), // ✅ محدث (استدعاء المستحقات)
+    withdrawPayment: (paymentDueId, data) => api.post(`/api/alimony-dues/${paymentDueId}/withdraw`, data), // ✅ محدث
+    initiateAlimonyPayment: (paymentDueId, data) => api.post(`/api/alimony-dues/${paymentDueId}/payments`, data), // ✅ محدث
     
     // جلب بيانات ملف موظف المحكمة
-    getProfile: () => api.get('/api/court-staffs/me'),
+    getProfile: () => api.get('/api/court-staff/me'), // ✅ محدث (بدون s الجمع)
 };
 
 /**
  * --- [ C. خدمات البيانات المساعدة - Lookups ] ---
  */
 export const lookupAPI = {
-    getVisitationLocations: (params) => api.get('/api/visitation-locations', { params }),
-    createLocation: (data) => api.post('/api/visitation-locations', data),
-    updateLocation: (id, data) => api.put(`/api/visitation-locations/${id}`, data),
-    deleteLocation: (id) => api.delete(`/api/visitation-locations/${id}`),
+    getVisitationLocations: (params) => api.get('/api/visit-centers', { params }), // ✅ محدث
+    createLocation: (data) => api.post('/api/visit-centers', data), // ✅ محدث
+    updateLocation: (id, data) => api.put(`/api/visit-centers/${id}`, data), // ✅ محدث
+    deleteLocation: (id) => api.delete(`/api/visit-centers/${id}`), // ✅ محدث
 };
 
 /**
  * --- [ D. خدمات مركز الرؤية - Visitation Execution ] ---
  */
 export const visitationAPI = {
-    list: (params) => api.get('/api/visitations', { params }),
-    checkIn: (id, nationalId) => api.patch(`/api/visitations/${id}/check-in`, { nationalId }),
-    complete: (id) => api.patch(`/api/visitations/${id}/complete`),
-    setCompanion: (id, data) => api.patch(`/api/visitations/${id}`, typeof data === 'object' ? data : { companionNationalId: data }),
+    list: (params) => api.get('/api/visit-sessions', { params }), // ✅ محدث
+    checkIn: (id, nationalId) => api.patch(`/api/visit-sessions/${id}/check-in`, { nationalId }), // ✅ محدث
+    complete: (id) => api.patch(`/api/visit-sessions/${id}/check-out`), // ✅ محدث
+    setCompanion: (id, data) => api.patch(`/api/visit-sessions/${id}`, typeof data === 'object' ? data : { companionNationalId: data }), // ✅ محدث
 };
 
 /**
@@ -173,7 +170,7 @@ export const schoolAPI = {
  */
 export const complaintsAPI = {
     create: (data) => api.post('/api/complaints', data),
-    listMyComplaints: (params) => api.get('/api/courts/me/complaints', { params }), 
+    listMyComplaints: (params) => api.get('/api/court-staff/me/complaints', { params }), // ✅ محدث
     listComplaintsByFamily: (familyId, params) => api.get(`/api/families/${familyId}/complaints`, { params }),
     updateStatus: (id, data) => api.patch(`/api/complaints/${id}/status`, data),
 };
@@ -182,18 +179,17 @@ export const complaintsAPI = {
  * --- [ G. التنبيهات والمخالفات - Obligation Alerts ] ---
  */
 export const alertsAPI = {
-    list: (params) => api.get('/api/obligation-alerts', { params }),
-    updateStatus: (id, data) => api.patch(`/api/obligation-alerts/${id}/status`, data),
+    list: (params) => api.get('/api/court-staff/me/violation-alerts', { params }), // ✅ محدث
+    updateStatus: (id, data) => api.patch(`/api/violation-alerts/${id}/status`, data), // ✅ محدث
 };
 
 /**
  * --- [ H. طلبات الحضانة - Custody Requests ] ---
  */
 export const requestsAPI = {
-    list: (params) => api.get('/api/custody-requests', { params }),
-    create: (data) => api.post('/api/custody-requests', data),
-    // ✅ تم التصحيح: المسار في السواجر هو respond وليس process
-    process: (id, data) => api.patch(`/api/custody-requests/${id}/respond`, data), 
+    list: (params) => api.get('/api/hosting-requests', { params }), // ✅ محدث
+    create: (data) => api.post('/api/hosting-requests', data), // ✅ محدث
+    process: (id, data) => api.patch(`/api/hosting-requests/${id}/respond`, data), // ✅ محدث (respond)
 };
 
 /**

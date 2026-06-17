@@ -1,17 +1,53 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
+import { Menu } from 'lucide-react'; // ✅ استدعاء أيقونة الهامبرجر للموبايل
 
 const AdminLayout = () => {
+  // ✅ إضافة حالة التحكم في القائمة الجانبية للموبايل
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-[#F3F4F6] font-sans" dir="rtl">
-      <Sidebar />
-      {/* أضفنا pr-28 لكي نترك مساحة للـ Sidebar الثابت على اليمين */}
-      <main className="pr-28 min-h-screen">
-        <div className="p-8">
-          <Outlet />
+    <div className="flex h-screen bg-[#F3F4F6] overflow-hidden font-sans" dir="rtl">
+      
+      {/* 📱 Navbar الموبايل (يظهر فقط في الشاشات الصغيرة) */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-[#1e3a8a] text-white z-40 flex items-center px-4 shadow-md justify-between">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsMobileMenuOpen(true)} 
+            className="p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors border-none outline-none cursor-pointer"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          <span className="font-bold text-lg tracking-wide">إدارة وصال</span>
         </div>
+        
+        {/* لوجو النظام للموبايل */}
+        <img 
+          src={`${import.meta.env.BASE_URL}logo.svg`} 
+          alt="شعار وصال" 
+          className="w-10 h-10 object-contain drop-shadow-md"
+          onError={(e) => { e.target.src = 'https://placehold.co/40x40/1e3a8a/ffffff/png?text=W'; }}
+        />
+      </div>
+
+      {/* 📋 القائمة الجانبية (نمرر لها حالة الفتح والإغلاق) */}
+      <Sidebar isOpen={isMobileMenuOpen} setIsOpen={setIsMobileMenuOpen} />
+
+      {/* 🌑 الـ Overlay (الخلفية الشفافة الداكنة للموبايل عند فتح القائمة) */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
+          onClick={() => setIsMobileMenuOpen(false)}
+        ></div>
+      )}
+
+      {/* 📄 منطقة المحتوى الرئيسي */}
+      <main className="flex-1 overflow-y-auto pt-16 md:pt-0 md:pr-28 w-full transition-all duration-300">
+        {/* شلنا الـ p-8 الثابتة عشان ندي حرية للصفحات الداخلية تعمل البادينج المناسب للموبايل والديسكتوب */}
+        <Outlet />
       </main>
+      
     </div>
   );
 };
